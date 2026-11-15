@@ -34,7 +34,8 @@ export default function useTaskActions() {
       try {
         const removed = await dispatch(deleteTask(id)).unwrap();
         close();
-        show('Task deleted', { undoTask: removed });
+        // Undo needs the task's data; skip it if the task was not in the store.
+        show('Task deleted', removed ? { undoTask: removed } : undefined);
       } catch (e) {
         show(e.message || 'Could not delete the task.');
       }
@@ -47,6 +48,7 @@ export default function useTaskActions() {
       try {
         await dispatch(toggleTaskStatus(id)).unwrap();
       } catch (e) {
+        if (e.name === 'ConditionError') return; // a toggle for this task is already in flight
         show(e.message || 'Could not update the task.');
       }
     },

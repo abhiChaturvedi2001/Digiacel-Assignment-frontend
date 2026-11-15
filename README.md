@@ -11,7 +11,7 @@ npm run dev              # http://localhost:5173
 ```
 
 Start your backend first. In dev, Vite proxies `/api/*` to `VITE_PROXY_TARGET`
-(default `http://localhost:5000`, set it to your backend's PORT in `.env`).
+(default `http://localhost:8081`, the backend's default PORT; change it in `.env` if yours differs).
 
 ## Structure
 
@@ -46,14 +46,18 @@ Dates are `YYYY-MM-DD` strings, times are `HH:mm` strings (the backend converts 
 
 | Method | Path                    | Body             | Returns |
 | ------ | ----------------------- | ---------------- | ------- |
-| GET    | `/api/tasks`            |                  | `Task[]` |
-| GET    | `/api/tasks?search=kw`  |                  | `Task[]` |
+| GET    | `/api/tasks`            |                  | `Task[]` (max 1000) |
+| GET    | `/api/tasks?from=&to=`  |                  | `Task[]` in that date range |
+| GET    | `/api/tasks?search=kw`  |                  | `Task[]` (max 50) |
 | POST   | `/api/tasks`            | task fields      | `Task` (201) |
-| PUT    | `/api/tasks/:id`        | fields to change | `Task` |
+| PUT    | `/api/tasks/:id`        | all task fields  | `Task` |
 | PATCH  | `/api/tasks/:id/status` | `{ status }`     | `Task` |
 | DELETE | `/api/tasks/:id`        |                  | 204 |
 
-Errors: non-2xx with `{ "message": "..." }`. The UI shows that message.
+Task fields: `title` (required, max 80), `date` and `startTime` (required), `endTime` (`''` or after `startTime`),
+`description` (max 1000), `priority` (`low|medium|high|''`), `status` (`in_progress|completed`).
+
+Errors: non-2xx with `{ "success": false, "message": "...", "details"?: [...] }`. The UI shows `message`.
 
 ## Production
 

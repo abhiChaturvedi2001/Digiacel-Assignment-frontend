@@ -10,7 +10,7 @@ export const createTask = createAsyncThunk('tasks/create', (data) => taskService
 
 export const updateTask = createAsyncThunk('tasks/update', ({ id, data }) => taskService.update(id, data));
 
-/** Resolves with the deleted task so the UI can offer Undo. */
+/** Resolves with the deleted task (or undefined if it was not in the store) so the UI can offer Undo. */
 export const deleteTask = createAsyncThunk('tasks/delete', async (id, { getState }) => {
   const task = getState().tasks.items.find((t) => t._id === id);
   await taskService.remove(id);
@@ -20,12 +20,25 @@ export const deleteTask = createAsyncThunk('tasks/delete', async (id, { getState
 /** Re-creates a task that was just deleted (Undo). */
 export const restoreTask = createAsyncThunk('tasks/restore', ({ _id, ...rest }) => taskService.create(rest));
 
-/** Optimistic: the checkbox flips immediately, and flips back if the request fails. */
-export const toggleTaskStatus = createAsyncThunk('tasks/toggleStatus', async (id, { getState }) => {
-  const current = getState().tasks.items.find((t) => t._id === id);
-  // pending reducer already flipped it, so the new status is what is in state now
-  return taskService.updateStatus(id, current.status);
-});
+/**
+ * Optimistic: the checkbox flips immediately, and flips back if the request fails.
+ * A second toggle on the same task is ignored until the first request settles,
+ * so responses can never arrive out of order. Skipped calls reject with name 'ConditionError'.
+ */
+export const toggleTaskStatus = createAsyncThunk(
+  'tasks/toggleStatus',
+  async (id, { getState }) => {
+    // pending reducer already flipped it, so the new status is what is in state now
+    const current = getState().tasks.items.find((t) => t._id === id);
+    return taskService.updateStatus(id, current.status);
+  },
+  {
+    condition: (id, { getState }) => {
+      const { items, togglingIds } = getState().tasks;
+      return !togglingIds[id] && items.some((t) => t._id === id);
+    },
+  }
+);
 
 const flip = (task) => {
   task.status = task.status === STATUS.COMPLETED ? STATUS.IN_PROGRESS : STATUS.COMPLETED;
@@ -33,7 +46,8 @@ const flip = (task) => {
 
 const slice = createSlice({
   name: 'tasks',
-  initialState: { items: [], status: 'idle', error: '' }, // status: idle | loading | succeeded | failed
+  // status: idle | loading | succeeded | failed; togglingIds: { [taskId]: true } while a status request is in flight
+  initialState: { items: [], status: 'idle', error: '', togglingIds: {} },
   reducers: {},
   extraReducers: (builder) => {
     builder
@@ -61,18 +75,21 @@ const slice = createSlice({
         if (i > -1) s.items[i] = a.payload;
       })
       .addCase(deleteTask.fulfilled, (s, a) => {
-        s.items = s.items.filter((t) => t._id !== a.payload._id);
+        s.items = s.items.filter((t) => t._id !== a.meta.arg);
       })
 
       .addCase(toggleTaskStatus.pending, (s, a) => {
+        s.togglingIds[a.meta.arg] = true;
         const t = s.items.find((x) => x._id === a.meta.arg);
         if (t) flip(t);
       })
       .addCase(toggleTaskStatus.fulfilled, (s, a) => {
+        delete s.togglingIds[a.meta.arg];
         const i = s.items.findIndex((t) => t._id === a.payload._id);
         if (i > -1) s.items[i] = a.payload;
       })
       .addCase(toggleTaskStatus.rejected, (s, a) => {
+        delete s.togglingIds[a.meta.arg];
         const t = s.items.find((x) => x._id === a.meta.arg);
         if (t) flip(t); // roll back
       });
