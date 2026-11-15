@@ -1,0 +1,74 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ------------------------------------------------------------------
+   COLOR ROOT
+   Values are space-separated RGB channels so Tailwind opacity works
+   (bg-primary/20, text-fg/60 ...). Edit colors here only.
+------------------------------------------------------------------- */
+:root {
+  --bg: 246 246 252;
+  --surface: 255 255 255;
+  --fg: 21 21 43;
+  --muted: 107 107 136;
+  --line: 231 231 243;
+
+  --primary: 74 79 242;
+  --primary-fg: 255 255 255;
+  --primary-soft: 232 233 254;
+  --deep: 43 46 164;
+  --track: 218 218 251;
+
+  --danger: 220 63 70;
+  --danger-soft: 252 230 232;
+  --success: 22 137 93;
+  --warning: 184 122 6;
+
+  --shadow: 21 21 43;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: 15 16 32;
+    --surface: 24 26 49;
+    --fg: 237 237 250;
+    --muted: 155 156 186;
+    --line: 42 44 74;
+
+    --primary: 107 111 255;
+    --primary-fg: 255 255 255;
+    --primary-soft: 38 41 91;
+    --deep: 82 86 232;
+    --track: 44 46 98;
+
+    --danger: 255 110 116;
+    --danger-soft: 58 32 43;
+    --success: 61 213 152;
+    --warning: 242 181 58;
+
+    --shadow: 0 0 0;
+  }
+  html { color-scheme: dark; }
+}
+
+@layer base {
+  html, body, #root { height: 100%; }
+  body {
+    @apply bg-bg font-sans text-fg antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+  button { @apply cursor-pointer; }
+  :focus-visible { @apply outline outline-2 outline-offset-2 outline-primary; }
+}
+
+@layer components {
+  .gutter {
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
